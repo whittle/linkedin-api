@@ -7,4 +7,4 @@ import Data.Binary (decode)
 import qualified Data.ByteString.Lazy as B
 
 shimToken :: IO Token
-shimToken = fmap decode $ B.readFile "./shim_token"
+shimToken = fmap decode $ B.readFile "./config/shim_token"
