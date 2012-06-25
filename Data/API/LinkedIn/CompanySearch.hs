@@ -9,7 +9,7 @@ module Data.API.LinkedIn.CompanySearch
 import Data.API.LinkedIn.Query
 import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
-import Text.XML.Stream.Parse.Skip (skipTag, skipContents)
+import Text.XML.Stream.Parse.Skip (skipTag, skipContents, readM)
 
 import Data.Conduit (MonadThrow, Sink)
 import Data.Default (Default(..))
@@ -88,11 +88,5 @@ data Facets = Facets
             deriving (Show)
 parseFacets :: MonadThrow m => Sink Event m (Maybe Facets)
 parseFacets = tagName "facets" ignoreAttrs $ const $ many (skipContents "facets") >> return Facets
-
-readM :: (Monad m) => Text -> m Integer
-readM t | [x] <- parse = return x
-        | otherwise = fail $ "Failed to parse \"" ++ s ++ "\" as an Integer."
-  where s = unpack t
-        parse = [x | (x,_) <- reads s]
 
 instance QueryResponsePair CompanySearchQuery CompanySearchPage
