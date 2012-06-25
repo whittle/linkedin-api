@@ -1,20 +1,20 @@
-name:                linkedin-api
-version:             0.1.0.0
-synopsis:            Access the LinkedIn API.
-homepage:            https://github.com/whittle/linkedin-api
-license:             MIT
-license-file:        LICENSE.txt
-author:              Jason Whittle
-maintainer:          jason.whittle@gmail.com
-copyright:           Copyright (c) 2012 Jason A. Whittle
-category:            Network, API
-build-type:          Simple
-cabal-version:       >= 1.8
-stability:           Experimental
-tested-with:         GHC == 7.4.1
-bug-reports:         https://github.com/whittle/linkedin-api/issues
+name:             linkedin-api
+version:          0.1.0.0
+synopsis:         Access the LinkedIn API.
+homepage:         https://github.com/whittle/linkedin-api
+license:          MIT
+license-file:     LICENSE.txt
+author:           Jason Whittle
+maintainer:       jason.whittle@gmail.com
+copyright:        Copyright (c) 2012 Jason A. Whittle
+category:         Network, API
+build-type:       Simple
+cabal-version:    >= 1.8
+stability:        experimental
+tested-with:      GHC == 7.4.1
+bug-reports:      https://github.com/whittle/linkedin-api/issues
 description:
-  This is a driver for the LinkedIn API.
+  A driver for the LinkedIn API.
 
 extra-source-files:
   README.md
@@ -28,11 +28,11 @@ library
     Data.API.LinkedIn.Query
     Network.API.ShimToken
 
-  build-depends: base           == 4.5.*
-               , binary         == 0.5.*
-               , bytestring     == 0.9.*
-               , hoauth         == 0.3.*
-               , text           == 0.11.*
+  build-depends:  base                          == 4.5.*
+                , binary                        == 0.5.*
+                , bytestring                    == 0.9.*
+                , hoauth                        == 0.3.*
+                , text                          == 0.11.*
 
 source-repository head
   type: git
