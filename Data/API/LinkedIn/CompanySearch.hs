@@ -1,11 +1,14 @@
-{-# LANGUAGE OverloadedStrings, NoMonomorphismRestriction #-}
+{-# LANGUAGE OverloadedStrings
+           , NoMonomorphismRestriction
+           , MultiParamTypeClasses #-}
 module Data.API.LinkedIn.CompanySearch
---       ( CompanySearchQuery(..)
---       , CompanySearchPage(..)
---       , parseCompanySearchPage
-        where
+       ( CompanySearchQuery(..)
+       , CompanySearchPage(..)
+       ) where
 
 import Data.API.LinkedIn.Query
+import Data.API.LinkedIn.QueryResponsePair
+import Data.API.LinkedIn.Response
 import Text.XML.Stream.Parse.Skip (skipTag, skipContents)
 
 import Data.Conduit (MonadThrow, Sink)
@@ -59,6 +62,9 @@ parseCompanySearchPage = tagNoAttr "company-search" $ do
   --facets <- parseFacets
   return $ CompanySearchPage companyList --numResults --facets
 
+instance Response CompanySearchPage where
+  parsePage = parseCompanySearchPage
+
 data Companies = Companies [Company]
                  deriving (Show)
 parseCompanies :: MonadThrow m => Sink Event m (Maybe Companies)
@@ -88,3 +94,5 @@ readM t | [x] <- parse = return x
         | otherwise = fail $ "Failed to parse \"" ++ s ++ "\" as an Integer."
   where s = unpack t
         parse = [x | (x,_) <- reads s]
+
+instance QueryResponsePair CompanySearchQuery CompanySearchPage

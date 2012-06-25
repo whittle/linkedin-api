@@ -27,6 +27,8 @@ library
 
   other-modules:
     Data.API.LinkedIn.Query
+    Data.API.LinkedIn.QueryResponsePair
+    Data.API.LinkedIn.Response
     Network.API.ShimToken
     Text.XML.Stream.Parse.Skip
 
