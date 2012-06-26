@@ -23,13 +23,13 @@ extra-source-files:
 library
   exposed-modules:
     Network.API.LinkedIn
+    Network.API.ShimToken
     Data.API.LinkedIn.CompanySearch
 
   other-modules:
     Data.API.LinkedIn.Query
     Data.API.LinkedIn.QueryResponsePair
     Data.API.LinkedIn.Response
-    Network.API.ShimToken
     Text.XML.Stream.Parse.Skip
 
   build-depends:  base                          == 4.5.*
