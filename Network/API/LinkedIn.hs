@@ -1,13 +1,13 @@
 module Network.API.LinkedIn
-       ( sendRequest
+       ( getResponse
+       , parseResponse
+       , sendRequest
        , mkRequest
-       , module Data.API.LinkedIn.CompanySearch
        ) where
 
 import Data.API.LinkedIn.Query
 import qualified Data.API.LinkedIn.Response as L
 import Data.API.LinkedIn.QueryResponsePair
-import Data.API.LinkedIn.CompanySearch
 import Network.API.ShimToken
 
 import Data.Maybe (fromJust)
