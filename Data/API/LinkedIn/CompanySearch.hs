@@ -4,6 +4,7 @@
 module Data.API.LinkedIn.CompanySearch
        ( CompanySearchQuery(..)
        , CompanySearchPage(..)
+       , Companies(..)
        , Company(..)
        ) where
 
