@@ -8,7 +8,6 @@ module Network.API.LinkedIn
 import Data.API.LinkedIn.Query
 import qualified Data.API.LinkedIn.Response as L
 import Data.API.LinkedIn.QueryResponsePair
-import Network.API.ShimToken
 
 import Data.Maybe (fromJust)
 import Network.OAuth.Consumer
