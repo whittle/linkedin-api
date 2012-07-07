@@ -48,12 +48,9 @@ data CompanyFieldSelector = IdSelector | NameSelector | UniversalNameSelector
 
 allCompanyFieldSelectors = [ IdSelector, NameSelector, UniversalNameSelector
                            , EmailDomainsSelector, CompanyTypeSelector
-                             -- , TickerSelector
-                             -- , WebsiteUrlSelector
-                             -- , IndustrySelector
-                             -- , StatusSelector
-                             -- , LogoUrlSelector
-                             -- , SquareLogoUrlSelector
+                           , TickerSelector, WebsiteUrlSelector
+                           , IndustrySelector, StatusSelector, LogoUrlSelector
+                           , SquareLogoUrlSelector
                              -- , BlogRssUrlSelector
                              -- , TwitterIdSelector
                              -- , EmployeeCountRangeSelector
@@ -91,6 +88,12 @@ outputField NumFollowersSelector = "num-followers"
 toName :: CompanyFieldSelector -> Name
 toName s = Name (pack $ outputField s) Nothing Nothing
 
+selNoAttr :: MonadThrow m => CompanyFieldSelector -> Sink Event m a -> Sink Event m (Maybe a)
+selNoAttr = tagNoAttr . toName
+
+selName :: MonadThrow m => CompanyFieldSelector -> AttrParser a -> (a -> Sink Event m b) -> Sink Event m (Maybe b)
+selName = tagName . toName
+
 outputFields :: [CompanyFieldSelector] -> String
 outputFields cs = "(" ++ fields' cs ++ ")"
   where fields' = intercalate "," . map outputField
@@ -103,15 +106,27 @@ data CompanyLookupResult = CompanyLookupResult
                            , universalName :: Maybe Text
                            , emailDomains :: Maybe EmailDomains
                            , companyType :: Maybe CompanyType
+                           , tickerSymbol :: Maybe Text
+                           , websiteUrl :: Maybe Text
+                           , companyIndustry :: Maybe Text
+                           , companyStatus :: Maybe CompanyStatus
+                           , logoUrl :: Maybe Text
+                           , squareLogoUrl :: Maybe Text
                            } deriving (Show)
 parseCompanyLookupResult :: MonadThrow m => Sink Event m (Maybe CompanyLookupResult)
 parseCompanyLookupResult = tagNoAttr "company" $ do
-  mCompanyId <- tagNoAttr (toName IdSelector) content
-  mCompanyName <- tagNoAttr (toName NameSelector) content
-  mUniversalName <- tagNoAttr (toName UniversalNameSelector) content
+  mCompanyId <- selNoAttr IdSelector content
+  mCompanyName <- selNoAttr NameSelector content
+  mUniversalName <- selNoAttr UniversalNameSelector content
   mEmailDomains <- parseEmailDomains
   mCompanyType <- parseCompanyType
-  return $ CompanyLookupResult (fmap (read . unpack) mCompanyId) mCompanyName mUniversalName mEmailDomains mCompanyType
+  mTickerSymbol <- selNoAttr TickerSelector content
+  mWebsiteUrl <- selNoAttr WebsiteUrlSelector content
+  mCompanyIndustry <- selNoAttr IndustrySelector content
+  mCompanyStatus <- parseCompanyStatus
+  mLogoUrl <- selNoAttr LogoUrlSelector content
+  mSquareLogoUrl <- selNoAttr SquareLogoUrlSelector content
+  return $ CompanyLookupResult (fmap (read . unpack) mCompanyId) mCompanyName mUniversalName mEmailDomains mCompanyType mTickerSymbol mWebsiteUrl mCompanyIndustry mCompanyStatus mLogoUrl mSquareLogoUrl
 
 instance Response CompanyLookupResult where
   parsePage = parseCompanyLookupResult
@@ -123,7 +138,7 @@ data EmailDomains = EmailDomains
                     , allEmailsDomains :: [EmailDomain]
                     } deriving (Show)
 parseEmailDomains :: MonadThrow m => Sink Event m (Maybe EmailDomains)
-parseEmailDomains = tagName (toName EmailDomainsSelector) (requireAttr "total") $ \t -> do
+parseEmailDomains = selName EmailDomainsSelector (requireAttr "total") $ \t -> do
   domains <- many parseEmailDomain
   return $ EmailDomains (read $ unpack t) domains
 
@@ -138,7 +153,17 @@ data CompanyType = CompanyType
                    , companyTypeName :: Text
                    } deriving (Show)
 parseCompanyType :: MonadThrow m => Sink Event m (Maybe CompanyType)
-parseCompanyType = tagNoAttr (toName CompanyTypeSelector) $ do
+parseCompanyType = selNoAttr CompanyTypeSelector $ do
   code <- force "company-type nodes must have a code node" $ tagNoAttr "code" content
   name <- force "company-type nodes must have a name node" $ tagNoAttr "name" content
   return $ CompanyType code name
+
+data CompanyStatus = CompanyStatus
+                     { companyStatusCode :: Text
+                     , companyStatusName :: Text
+                     } deriving (Show)
+parseCompanyStatus :: MonadThrow m => Sink Event m (Maybe CompanyStatus)
+parseCompanyStatus = selNoAttr StatusSelector $ do
+  code <- force "status nodes must contain a code node" $ tagNoAttr "code" content
+  name <- force "status nodes must contain a name node" $ tagNoAttr "name" content
+  return $ CompanyStatus code name
