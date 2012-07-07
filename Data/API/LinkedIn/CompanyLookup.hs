@@ -35,53 +35,45 @@ instance Query CompanyLookupQuery where
                      ]
   toQueryItems = const []
 
-data CompanyFieldSelector = IdSelector | NameSelector | UniversalNameSelector
-                          | EmailDomainsSelector | CompanyTypeSelector
-                          | TickerSelector | WebsiteUrlSelector
-                          | IndustrySelector | StatusSelector | LogoUrlSelector
-                          | SquareLogoUrlSelector | BlogRssUrlSelector
-                          | TwitterIdSelector | EmployeeCountRangeSelector
-                          | SpecialtiesSelector
-                          | LocationsSelector [LocationFieldSelector]
-                          | DescriptionSelector | StockExchangeSelector
-                          | FoundedYearSelector | EndYearSelector
-                          | NumFollowersSelector
+data CompanyFieldSelector = IdS | NameS | UniversalNameS | EmailDomainsS
+                          | CompanyTypeS | TickerS | WebsiteUrlS | IndustryS
+                          | StatusS | LogoUrlS | SquareLogoUrlS | BlogRssUrlS
+                          | TwitterIdS | EmployeeCountRangeS | SpecialtiesS
+                          | LocationsS [LocationFieldSelector] | DescriptionS
+                          | StockExchangeS | FoundedYearS | EndYearS
+                          | NumFollowersS
                           deriving (Show)
 
-allCompanyFieldSelectors = [ IdSelector, NameSelector, UniversalNameSelector
-                           , EmailDomainsSelector, CompanyTypeSelector
-                           , TickerSelector, WebsiteUrlSelector
-                           , IndustrySelector, StatusSelector, LogoUrlSelector
-                           , SquareLogoUrlSelector, BlogRssUrlSelector
-                           , TwitterIdSelector, EmployeeCountRangeSelector
-                           , SpecialtiesSelector
-                           , DescriptionSelector, StockExchangeSelector
-                           , FoundedYearSelector, EndYearSelector
-                           , NumFollowersSelector
+allCompanyFieldSelectors = [ IdS, NameS, UniversalNameS, EmailDomainsS
+                           , CompanyTypeS, TickerS, WebsiteUrlS, IndustryS
+                           , StatusS, LogoUrlS, SquareLogoUrlS, BlogRssUrlS
+                           , TwitterIdS, EmployeeCountRangeS, SpecialtiesS
+                           , DescriptionS, StockExchangeS, FoundedYearS
+                           , EndYearS, NumFollowersS
                            ]
 
 outputField :: CompanyFieldSelector -> String
-outputField IdSelector = "id"
-outputField NameSelector = "name"
-outputField UniversalNameSelector = "universal-name"
-outputField EmailDomainsSelector = "email-domains"
-outputField CompanyTypeSelector = "company-type"
-outputField TickerSelector = "ticker"
-outputField WebsiteUrlSelector = "website-url"
-outputField IndustrySelector = "industry"
-outputField StatusSelector = "status"
-outputField LogoUrlSelector = "logo-url"
-outputField SquareLogoUrlSelector = "square-logo-url"
-outputField BlogRssUrlSelector = "blog-rss-url"
-outputField TwitterIdSelector = "twitter-id"
-outputField EmployeeCountRangeSelector = "employee-count-range"
-outputField SpecialtiesSelector = "specialties"
-outputField (LocationsSelector _) = undefined
-outputField DescriptionSelector = "description"
-outputField StockExchangeSelector = "stock-exchange"
-outputField FoundedYearSelector = "founded-year"
-outputField EndYearSelector = "end-year"
-outputField NumFollowersSelector = "num-followers"
+outputField IdS = "id"
+outputField NameS = "name"
+outputField UniversalNameS = "universal-name"
+outputField EmailDomainsS = "email-domains"
+outputField CompanyTypeS = "company-type"
+outputField TickerS = "ticker"
+outputField WebsiteUrlS = "website-url"
+outputField IndustryS = "industry"
+outputField StatusS = "status"
+outputField LogoUrlS = "logo-url"
+outputField SquareLogoUrlS = "square-logo-url"
+outputField BlogRssUrlS = "blog-rss-url"
+outputField TwitterIdS = "twitter-id"
+outputField EmployeeCountRangeS = "employee-count-range"
+outputField SpecialtiesS = "specialties"
+outputField (LocationsS _) = undefined
+outputField DescriptionS = "description"
+outputField StockExchangeS = "stock-exchange"
+outputField FoundedYearS = "founded-year"
+outputField EndYearS = "end-year"
+outputField NumFollowersS = "num-followers"
 
 toName :: CompanyFieldSelector -> Name
 toName s = Name (pack $ outputField s) Nothing Nothing
@@ -124,26 +116,26 @@ data CompanyLookupResult = CompanyLookupResult
                            } deriving (Show)
 parseCompanyLookupResult :: MonadThrow m => Sink Event m (Maybe CompanyLookupResult)
 parseCompanyLookupResult = tagNoAttr "company" $ CompanyLookupResult
-                           <$> (fmap (fmap (read . unpack)) $ selNoAttr IdSelector content)
-                           <*> (fmap join $ selNoAttr NameSelector contentMaybe)
-                           <*> (fmap join $ selNoAttr UniversalNameSelector contentMaybe)
+                           <$> (fmap (fmap (read . unpack)) $ selNoAttr IdS content)
+                           <*> (fmap join $ selNoAttr NameS contentMaybe)
+                           <*> (fmap join $ selNoAttr UniversalNameS contentMaybe)
                            <*> parseEmailDomains
                            <*> parseCompanyType
-                           <*> (fmap join $ selNoAttr TickerSelector contentMaybe)
-                           <*> (fmap join $ selNoAttr WebsiteUrlSelector contentMaybe)
-                           <*> (fmap join $ selNoAttr IndustrySelector contentMaybe)
+                           <*> (fmap join $ selNoAttr TickerS contentMaybe)
+                           <*> (fmap join $ selNoAttr WebsiteUrlS contentMaybe)
+                           <*> (fmap join $ selNoAttr IndustryS contentMaybe)
                            <*> parseCompanyStatus
-                           <*> (fmap join $ selNoAttr LogoUrlSelector contentMaybe)
-                           <*> (fmap join $ selNoAttr SquareLogoUrlSelector contentMaybe)
-                           <*> (fmap join $ selNoAttr BlogRssUrlSelector contentMaybe)
-                           <*> (fmap join $ selNoAttr TwitterIdSelector contentMaybe)
+                           <*> (fmap join $ selNoAttr LogoUrlS contentMaybe)
+                           <*> (fmap join $ selNoAttr SquareLogoUrlS contentMaybe)
+                           <*> (fmap join $ selNoAttr BlogRssUrlS contentMaybe)
+                           <*> (fmap join $ selNoAttr TwitterIdS contentMaybe)
                            <*> parseEmployeeCountRange
                            <*> parseSpecialties
-                           <*> (fmap join $ selNoAttr DescriptionSelector contentMaybe)
+                           <*> (fmap join $ selNoAttr DescriptionS contentMaybe)
                            <*> parseStockExchange
-                           <*> (fmap (fmap (read . unpack)) $ selNoAttr FoundedYearSelector content)
-                           <*> (fmap (fmap (read . unpack)) $ selNoAttr EndYearSelector content)
-                           <*> (fmap (fmap (read . unpack)) $ selNoAttr NumFollowersSelector content)
+                           <*> (fmap (fmap (read . unpack)) $ selNoAttr FoundedYearS content)
+                           <*> (fmap (fmap (read . unpack)) $ selNoAttr EndYearS content)
+                           <*> (fmap (fmap (read . unpack)) $ selNoAttr NumFollowersS content)
 
 instance Response CompanyLookupResult where
   parsePage = parseCompanyLookupResult
@@ -155,7 +147,7 @@ data EmailDomains = EmailDomains
                     , allEmailsDomains :: [Text]
                     } deriving (Show)
 parseEmailDomains :: MonadThrow m => Sink Event m (Maybe EmailDomains)
-parseEmailDomains = selName EmailDomainsSelector (requireAttr "total") $ \t -> do
+parseEmailDomains = selName EmailDomainsS (requireAttr "total") $ \t -> do
   domains <- many $ tagNoAttr "email-domain" content
   return $ EmailDomains (read $ unpack t) domains
 
@@ -164,7 +156,7 @@ data CompanyType = CompanyType
                    , companyTypeName :: Text
                    } deriving (Show)
 parseCompanyType :: MonadThrow m => Sink Event m (Maybe CompanyType)
-parseCompanyType = selNoAttr CompanyTypeSelector $ CompanyType
+parseCompanyType = selNoAttr CompanyTypeS $ CompanyType
                    <$> (force "company-type must contain a code" $ tagNoAttr "code" content)
                    <*> (force "company-type must contain a name" $ tagNoAttr "name" content)
 
@@ -173,7 +165,7 @@ data CompanyStatus = CompanyStatus
                      , companyStatusName :: Text
                      } deriving (Show)
 parseCompanyStatus :: MonadThrow m => Sink Event m (Maybe CompanyStatus)
-parseCompanyStatus = selNoAttr StatusSelector $ CompanyStatus
+parseCompanyStatus = selNoAttr StatusS $ CompanyStatus
                      <$> (force "status must contain a code" $ tagNoAttr "code" content)
                      <*> (force "status must contain a name" $ tagNoAttr "name" content)
 
@@ -182,17 +174,17 @@ data EmployeeCountRange = EmployeeCountRange
                           , employeeCountRangeName :: Text
                           } deriving (Show)
 parseEmployeeCountRange :: MonadThrow m => Sink Event m (Maybe EmployeeCountRange)
-parseEmployeeCountRange = selNoAttr EmployeeCountRangeSelector $ EmployeeCountRange
+parseEmployeeCountRange = selNoAttr EmployeeCountRangeS $ EmployeeCountRange
                           <$> (force (name++" must contain a code") $ tagNoAttr "code" content)
                           <*> (force (name++" must contain a name") $ tagNoAttr "name" content)
-  where name = outputField EmployeeCountRangeSelector
+  where name = outputField EmployeeCountRangeS
 
 data Specialties = Specialties
                    { totalSpecialties :: Integer
                    , allSpecialties :: [Text]
                    } deriving (Show)
 parseSpecialties :: MonadThrow m => Sink Event m (Maybe Specialties)
-parseSpecialties = selName SpecialtiesSelector (requireAttr "total") $ \t -> do
+parseSpecialties = selName SpecialtiesS (requireAttr "total") $ \t -> do
   specialties <- many $ tagNoAttr "specialty" content
   return $ Specialties (read $ unpack t) specialties
 
@@ -201,7 +193,7 @@ data StockExchange = StockExchange
                      , stockExchangeName :: Text
                      } deriving (Show)
 parseStockExchange :: MonadThrow m => Sink Event m (Maybe StockExchange)
-parseStockExchange = selNoAttr StockExchangeSelector $ StockExchange
+parseStockExchange = selNoAttr StockExchangeS $ StockExchange
                      <$> (force (name ++ " must contain a code") $ tagNoAttr "code" content)
                      <*> (force (name ++ " must contain a name") $ tagNoAttr "name" content)
-  where name = outputField StockExchangeSelector
+  where name = outputField StockExchangeS
