@@ -120,25 +120,22 @@ data CompanyLookupResult = CompanyLookupResult
 parseCompanyLookupResult :: MonadThrow m => Sink Event m (Maybe CompanyLookupResult)
 parseCompanyLookupResult = tagNoAttr "company" $ CompanyLookupResult
                            <$> (fmap (fmap (read . unpack)) $ selNoAttr IdSelector content)
-                           <*> selNoAttr NameSelector content
-                           <*> selNoAttr UniversalNameSelector content
+                           <*> (fmap join $ selNoAttr NameSelector contentMaybe)
+                           <*> (fmap join $ selNoAttr UniversalNameSelector contentMaybe)
                            <*> parseEmailDomains
                            <*> parseCompanyType
-                           <*> selNoAttr TickerSelector content
-                           <*> selNoAttr WebsiteUrlSelector content
-                           <*> selNoAttr IndustrySelector content
+                           <*> (fmap join $ selNoAttr TickerSelector contentMaybe)
+                           <*> (fmap join $ selNoAttr WebsiteUrlSelector contentMaybe)
+                           <*> (fmap join $ selNoAttr IndustrySelector contentMaybe)
                            <*> parseCompanyStatus
-                           <*> selNoAttr LogoUrlSelector content
-                           <*> selNoAttr SquareLogoUrlSelector content
-                           <*> parseBlogRssUrl
+                           <*> (fmap join $ selNoAttr LogoUrlSelector contentMaybe)
+                           <*> (fmap join $ selNoAttr SquareLogoUrlSelector contentMaybe)
+                           <*> (fmap join $ selNoAttr BlogRssUrlSelector contentMaybe)
 
 instance Response CompanyLookupResult where
   parsePage = parseCompanyLookupResult
 
 instance QueryResponsePair CompanyLookupQuery CompanyLookupResult
-
-parseBlogRssUrl :: MonadThrow m => Sink Event m (Maybe Text)
-parseBlogRssUrl = fmap join $ selNoAttr BlogRssUrlSelector contentMaybe
 
 data EmailDomains = EmailDomains
                     { totalEmailDomains :: Integer
