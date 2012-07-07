@@ -26,6 +26,7 @@ library
     Network.API.ShimToken
     Data.API.LinkedIn.CompanySearch
     Data.API.LinkedIn.CompanyLookup
+    Data.API.LinkedIn.PeopleSearch
 
   other-modules:
     Data.API.LinkedIn.Query
