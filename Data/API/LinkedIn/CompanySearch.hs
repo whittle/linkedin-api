@@ -11,9 +11,6 @@ module Data.API.LinkedIn.CompanySearch
 import Data.API.LinkedIn.Query
 import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
-import Network.API.LinkedIn --temp
-import Network.API.ShimToken --temp
-import Text.XML.Stream.Parse.Skip (skipTag, skipContents, readM) --temp
 
 import Control.Applicative ((<$>), (<*>))
 import Data.Conduit (MonadThrow, Sink)
@@ -26,8 +23,8 @@ import Text.XML.Stream.Parse
 data CompanySearchQuery = CompanySearchQuery
                           { keywords :: [Text]
                           , hqOnly :: Maybe Bool
-                          , facet :: Maybe Facet
-                          , facets :: [Facet]
+                          , queryFacet :: Maybe QueryFacet
+                          , queryFacets :: [QueryFacet]
                           , start :: Maybe Integer
                           , count :: Maybe Integer
                           , sort :: Maybe SortOrder
@@ -36,8 +33,8 @@ data CompanySearchQuery = CompanySearchQuery
 instance Default CompanySearchQuery where
   def = CompanySearchQuery { keywords = []
                            , hqOnly = Nothing
-                           , facet = Nothing
-                           , facets = []
+                           , queryFacet = Nothing
+                           , queryFacets = []
                            , start = Nothing
                            , count = Nothing
                            , sort = Nothing
@@ -47,7 +44,7 @@ instance Query CompanySearchQuery where
   toPathSegments _ = ["company-search"]
   toQueryItems q = [("keywords", intercalate " " $ map unpack $ keywords q)]
 
-type Facet = Text
+type QueryFacet = Text
 
 data SortOrder = Relevance
                | Relationship
@@ -55,19 +52,17 @@ data SortOrder = Relevance
                | CompanySize
                deriving (Eq, Show)
 
-
 data CompanySearchPage = CompanySearchPage
-                         { searchCompanies :: Companies
+                         { companies :: Companies
                          , numResults :: Integer
-                         -- , searchFacets :: Maybe Facets
+                         , resultFacets :: Maybe Facets
                          } deriving (Show)
 parseCompanySearchPage :: MonadThrow m => Sink Event m (Maybe CompanySearchPage)
-parseCompanySearchPage = tagNoAttr "company-search" $ do
-  companyList <- force "companies required" parseCompanies
-  numResults <- fmap (read . unpack) $ force "numResults required"
-                $ tagNoAttr "num-results" content
-  skipTag "facets"
-  return $ CompanySearchPage companyList numResults
+parseCompanySearchPage = tagNoAttr "company-search" $ CompanySearchPage
+                         <$> force "companies required" parseCompanies
+                         <*> (fmap (read . unpack) $ force "numResults required"
+                              $ tagNoAttr "num-results" content)
+                         <*> parseFacets
 
 instance Response CompanySearchPage where
   parsePage = parseCompanySearchPage
@@ -90,6 +85,45 @@ parseCompany = tagNoAttr "company" $ Company
                <*> (force "companyName required" $ tagNoAttr "name" content)
 
 data Facets = Facets
-            deriving (Show)
+              { totalFacets :: Integer
+              , allFacets :: [Facet]
+              } deriving (Show)
 parseFacets :: MonadThrow m => Sink Event m (Maybe Facets)
-parseFacets = tagName "facets" ignoreAttrs $ const $ many (skipContents "facets") >> return Facets
+parseFacets = tagName "facets" (requireAttr "total") $ \total -> do
+  facets <- many $ parseFacet
+  return $ Facets (read $ unpack total) facets
+
+data Facet = Facet
+             { facetCode :: Text
+             , facetName :: Text
+             , facetBuckets :: Maybe Buckets
+             } deriving (Show)
+parseFacet :: MonadThrow m => Sink Event m (Maybe Facet)
+parseFacet = tagNoAttr "facet" $ Facet
+             <$> (force "facet must contain a code" $ tagNoAttr "code" content)
+             <*> (force "facet must contain a name" $ tagNoAttr "name" content)
+             <*> parseBuckets
+
+data Buckets = Buckets
+               { totalBuckets :: Integer
+               , allBuckets :: [Bucket]
+               } deriving (Show)
+parseBuckets :: MonadThrow m => Sink Event m (Maybe Buckets)
+parseBuckets = tagName "buckets" (requireAttr "total") $ \total -> do
+  buckets <- many $ parseBucket
+  return $ Buckets (read $ unpack total) buckets
+
+data Bucket = Bucket
+              { bucketCode :: Text
+              , bucketName :: Text
+              , bucketCount :: Integer
+              , selected :: Bool
+              } deriving (Show)
+parseBucket :: MonadThrow m => Sink Event m (Maybe Bucket)
+parseBucket = tagNoAttr "bucket" $ Bucket
+              <$> (force "bucket must contain code" $ tagNoAttr "code" content)
+              <*> (force "bucket must contain name" $ tagNoAttr "name" content)
+              <*> (fmap (read . unpack) $ force "bucket must contain a count"
+                   $ tagNoAttr "count" content)
+              <*> (fmap ("true"==) $ force "bucket must contain a selected"
+                   $ tagNoAttr "selected" content)
