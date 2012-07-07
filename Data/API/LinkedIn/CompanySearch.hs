@@ -11,8 +11,11 @@ module Data.API.LinkedIn.CompanySearch
 import Data.API.LinkedIn.Query
 import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
-import Text.XML.Stream.Parse.Skip (skipTag, skipContents, readM)
+import Network.API.LinkedIn --temp
+import Network.API.ShimToken --temp
+import Text.XML.Stream.Parse.Skip (skipTag, skipContents, readM) --temp
 
+import Control.Applicative ((<$>), (<*>))
 import Data.Conduit (MonadThrow, Sink)
 import Data.Default (Default(..))
 import Data.List (intercalate)
@@ -53,42 +56,40 @@ data SortOrder = Relevance
                deriving (Eq, Show)
 
 
-data CompanySearchPage = CompanySearchPage Companies --NumResults --(Maybe Facets)
-                       deriving (Show)
+data CompanySearchPage = CompanySearchPage
+                         { searchCompanies :: Companies
+                         , numResults :: Integer
+                         -- , searchFacets :: Maybe Facets
+                         } deriving (Show)
 parseCompanySearchPage :: MonadThrow m => Sink Event m (Maybe CompanySearchPage)
 parseCompanySearchPage = tagNoAttr "company-search" $ do
   companyList <- force "companies required" parseCompanies
-  skipTag "num-results"
-  --numResults <- force "numResults required" parseNumResults
+  numResults <- fmap (read . unpack) $ force "numResults required"
+                $ tagNoAttr "num-results" content
   skipTag "facets"
-  --facets <- parseFacets
-  return $ CompanySearchPage companyList --numResults --facets
+  return $ CompanySearchPage companyList numResults
 
 instance Response CompanySearchPage where
   parsePage = parseCompanySearchPage
 
+instance QueryResponsePair CompanySearchQuery CompanySearchPage
+
 data Companies = Companies [Company]
                  deriving (Show)
 parseCompanies :: MonadThrow m => Sink Event m (Maybe Companies)
-parseCompanies = tagName "companies" (ignoreAttrs) $ \a -> fmap Companies $ many parseCompany
+parseCompanies = tagName "companies" (ignoreAttrs) $ \a -> fmap Companies
+                                                           $ many parseCompany
 
 data Company = Company { companyId :: Integer
                        , companyName :: Text
                        } deriving (Show)
 parseCompany :: MonadThrow m => Sink Event m (Maybe Company)
-parseCompany = tagNoAttr "company" $ do
-  id <- force "companyId required" $ tagNoAttr "id" content
-  name <- force "companyName required" $ tagNoAttr "name" content
-  return $ Company (read $ unpack id) name
-
-data NumResults = NumResults Integer
-                deriving (Show)
--- parseNumResults :: MonadThrow m => Sink Event m (Maybe NumResults)
--- parseNumResults = fmap (fmap NumResults) $ force "num results required" $ tagNoAttr "num-results" $ content >>= readM
+parseCompany = tagNoAttr "company" $ Company
+               <$> (fmap (read . unpack) $ force "companyId required"
+                    $ tagNoAttr "id" content)
+               <*> (force "companyName required" $ tagNoAttr "name" content)
 
 data Facets = Facets
             deriving (Show)
 parseFacets :: MonadThrow m => Sink Event m (Maybe Facets)
 parseFacets = tagName "facets" ignoreAttrs $ const $ many (skipContents "facets") >> return Facets
-
-instance QueryResponsePair CompanySearchQuery CompanySearchPage
