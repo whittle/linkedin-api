@@ -13,6 +13,8 @@ import Network.API.LinkedIn --temp
 import Network.API.ShimToken --temp
 
 import Data.Conduit (MonadThrow, Sink)
+import Control.Applicative ((<$>), (<*>))
+import Control.Monad
 import Data.Default (Default(..))
 import Data.List (intercalate)
 import Data.Text (Text, pack, unpack)
@@ -50,8 +52,7 @@ allCompanyFieldSelectors = [ IdSelector, NameSelector, UniversalNameSelector
                            , EmailDomainsSelector, CompanyTypeSelector
                            , TickerSelector, WebsiteUrlSelector
                            , IndustrySelector, StatusSelector, LogoUrlSelector
-                           , SquareLogoUrlSelector
-                             -- , BlogRssUrlSelector
+                           , SquareLogoUrlSelector, BlogRssUrlSelector
                              -- , TwitterIdSelector
                              -- , EmployeeCountRangeSelector
                              -- , SpecialtiesSelector
@@ -112,10 +113,11 @@ data CompanyLookupResult = CompanyLookupResult
                            , companyStatus :: Maybe CompanyStatus
                            , logoUrl :: Maybe Text
                            , squareLogoUrl :: Maybe Text
+                           , blogRssUrl :: Maybe Text
                            } deriving (Show)
 parseCompanyLookupResult :: MonadThrow m => Sink Event m (Maybe CompanyLookupResult)
 parseCompanyLookupResult = tagNoAttr "company" $ do
-  mCompanyId <- selNoAttr IdSelector content
+  mCompanyId <- fmap (fmap (read . unpack)) $ selNoAttr IdSelector content
   mCompanyName <- selNoAttr NameSelector content
   mUniversalName <- selNoAttr UniversalNameSelector content
   mEmailDomains <- parseEmailDomains
@@ -126,7 +128,8 @@ parseCompanyLookupResult = tagNoAttr "company" $ do
   mCompanyStatus <- parseCompanyStatus
   mLogoUrl <- selNoAttr LogoUrlSelector content
   mSquareLogoUrl <- selNoAttr SquareLogoUrlSelector content
-  return $ CompanyLookupResult (fmap (read . unpack) mCompanyId) mCompanyName mUniversalName mEmailDomains mCompanyType mTickerSymbol mWebsiteUrl mCompanyIndustry mCompanyStatus mLogoUrl mSquareLogoUrl
+  mBlogRssUrl <- selNoAttr BlogRssUrlSelector content
+  return $ CompanyLookupResult mCompanyId mCompanyName mUniversalName mEmailDomains mCompanyType mTickerSymbol mWebsiteUrl mCompanyIndustry mCompanyStatus mLogoUrl mSquareLogoUrl mBlogRssUrl
 
 instance Response CompanyLookupResult where
   parsePage = parseCompanyLookupResult
@@ -153,17 +156,15 @@ data CompanyType = CompanyType
                    , companyTypeName :: Text
                    } deriving (Show)
 parseCompanyType :: MonadThrow m => Sink Event m (Maybe CompanyType)
-parseCompanyType = selNoAttr CompanyTypeSelector $ do
-  code <- force "company-type nodes must have a code node" $ tagNoAttr "code" content
-  name <- force "company-type nodes must have a name node" $ tagNoAttr "name" content
-  return $ CompanyType code name
+parseCompanyType = selNoAttr CompanyTypeSelector $ CompanyType <$> code <*> name
+  where code = force "company-type nodes must have a code node" $ tagNoAttr "code" content
+        name = force "company-type nodes must have a name node" $ tagNoAttr "name" content
 
 data CompanyStatus = CompanyStatus
                      { companyStatusCode :: Text
                      , companyStatusName :: Text
                      } deriving (Show)
 parseCompanyStatus :: MonadThrow m => Sink Event m (Maybe CompanyStatus)
-parseCompanyStatus = selNoAttr StatusSelector $ do
-  code <- force "status nodes must contain a code node" $ tagNoAttr "code" content
-  name <- force "status nodes must contain a name node" $ tagNoAttr "name" content
-  return $ CompanyStatus code name
+parseCompanyStatus = selNoAttr StatusSelector $ CompanyStatus <$> code <*> name
+  where code = force "status nodes must contain a code node" $ tagNoAttr "code" content
+        name = force "status nodes must contain a name node" $ tagNoAttr "name" content
