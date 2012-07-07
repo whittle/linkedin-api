@@ -28,6 +28,7 @@ library
     Data.API.LinkedIn.CompanyLookup
     Data.API.LinkedIn.Facet
     Data.API.LinkedIn.PeopleSearch
+    Data.API.LinkedIn.Profile
 
   other-modules:
     Data.API.LinkedIn.Query
