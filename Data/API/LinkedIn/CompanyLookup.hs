@@ -14,7 +14,7 @@ import Network.API.ShimToken --temp
 
 import Data.Conduit (MonadThrow, Sink)
 import Control.Applicative ((<$>), (<*>))
-import Control.Monad
+import Control.Monad (join)
 import Data.Default (Default(..))
 import Data.List (intercalate)
 import Data.Text (Text, pack, unpack)
@@ -128,7 +128,7 @@ parseCompanyLookupResult = tagNoAttr "company" $ do
   mCompanyStatus <- parseCompanyStatus
   mLogoUrl <- selNoAttr LogoUrlSelector content
   mSquareLogoUrl <- selNoAttr SquareLogoUrlSelector content
-  mBlogRssUrl <- selNoAttr BlogRssUrlSelector content
+  mBlogRssUrl <- parseBlogRssUrl
   return $ CompanyLookupResult mCompanyId mCompanyName mUniversalName mEmailDomains mCompanyType mTickerSymbol mWebsiteUrl mCompanyIndustry mCompanyStatus mLogoUrl mSquareLogoUrl mBlogRssUrl
 
 instance Response CompanyLookupResult where
@@ -136,20 +136,17 @@ instance Response CompanyLookupResult where
 
 instance QueryResponsePair CompanyLookupQuery CompanyLookupResult
 
+parseBlogRssUrl :: MonadThrow m => Sink Event m (Maybe Text)
+parseBlogRssUrl = fmap join $ selNoAttr BlogRssUrlSelector contentMaybe
+
 data EmailDomains = EmailDomains
                     { totalEmailDomains :: Integer
-                    , allEmailsDomains :: [EmailDomain]
+                    , allEmailsDomains :: [Text]
                     } deriving (Show)
 parseEmailDomains :: MonadThrow m => Sink Event m (Maybe EmailDomains)
 parseEmailDomains = selName EmailDomainsSelector (requireAttr "total") $ \t -> do
-  domains <- many parseEmailDomain
+  domains <- many $ tagNoAttr "email-domain" content
   return $ EmailDomains (read $ unpack t) domains
-
-newtype EmailDomain = EmailDomain
-                      { emailDomainText :: Text
-                      } deriving (Show)
-parseEmailDomain :: MonadThrow m => Sink Event m (Maybe EmailDomain)
-parseEmailDomain = tagNoAttr "email-domain" content >>= return . fmap EmailDomain
 
 data CompanyType = CompanyType
                    { companyTypeCode :: Text
