@@ -154,15 +154,15 @@ data CompanyType = CompanyType
                    , companyTypeName :: Text
                    } deriving (Show)
 parseCompanyType :: MonadThrow m => Sink Event m (Maybe CompanyType)
-parseCompanyType = selNoAttr CompanyTypeSelector $ CompanyType <$> code <*> name
-  where code = force "company-type nodes must contain a code node" $ tagNoAttr "code" content
-        name = force "company-type nodes must contain a name node" $ tagNoAttr "name" content
+parseCompanyType = selNoAttr CompanyTypeSelector $ CompanyType
+                   <$> (force "company-type must contain a code" $ tagNoAttr "code" content)
+                   <*> (force "company-type must contain a name" $ tagNoAttr "name" content)
 
 data CompanyStatus = CompanyStatus
                      { companyStatusCode :: Text
                      , companyStatusName :: Text
                      } deriving (Show)
 parseCompanyStatus :: MonadThrow m => Sink Event m (Maybe CompanyStatus)
-parseCompanyStatus = selNoAttr StatusSelector $ CompanyStatus <$> code <*> name
-  where code = force "status nodes must contain a code node" $ tagNoAttr "code" content
-        name = force "status nodes must contain a name node" $ tagNoAttr "name" content
+parseCompanyStatus = selNoAttr StatusSelector $ CompanyStatus
+                     <$> (force "status must contain a code" $ tagNoAttr "code" content)
+                     <*> (force "status must contain a name" $ tagNoAttr "name" content)
