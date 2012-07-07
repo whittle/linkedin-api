@@ -4,6 +4,7 @@ module Data.API.LinkedIn.PeopleSearch
        ( PeopleSearchQuery(..)
        ) where
 
+import Data.API.LinkedIn.Facet
 import Data.API.LinkedIn.Query
 import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
@@ -42,17 +43,17 @@ instance Query PeopleSearchQuery where
   toPathSegments = const ["people-search"]
   toQueryItems q = [("keywords", unpack $ keywords q)]
 
-type QueryFacet = Text
-
 data PeopleSearchPage = PeopleSearchPage
                         { people :: People
                         , numResults :: Maybe Integer
+                        , facets :: Maybe Facets
                         } deriving (Show)
 
 instance Response PeopleSearchPage where
   parsePage = tagNoAttr "people-search" $ PeopleSearchPage
               <$> force "people-search must include a people" parsePeople
               <*> (fmap (fmap (read . unpack)) $ tagNoAttr "num-results" content)
+              <*> parseFacets
 
 instance QueryResponsePair PeopleSearchQuery PeopleSearchPage
 

@@ -8,6 +8,7 @@ module Data.API.LinkedIn.CompanySearch
        , Company(..)
        ) where
 
+import Data.API.LinkedIn.Facet
 import Data.API.LinkedIn.Query
 import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
@@ -21,30 +22,28 @@ import Data.XML.Types (Event)
 import Text.XML.Stream.Parse
 
 data CompanySearchQuery = CompanySearchQuery
-                          { keywords :: [Text]
-                          , hqOnly :: Maybe Bool
+                          { queryKeywords :: Text
+                          , queryHqOnly :: Maybe Bool
                           , queryFacet :: Maybe QueryFacet
                           , queryFacets :: [QueryFacet]
-                          , start :: Maybe Integer
-                          , count :: Maybe Integer
-                          , sort :: Maybe SortOrder
+                          , queryStart :: Maybe Integer
+                          , queryCount :: Maybe Integer
+                          , querySort :: Maybe SortOrder
                           } deriving (Eq, Show)
 
 instance Default CompanySearchQuery where
-  def = CompanySearchQuery { keywords = []
-                           , hqOnly = Nothing
+  def = CompanySearchQuery { queryKeywords = ""
+                           , queryHqOnly = Nothing
                            , queryFacet = Nothing
                            , queryFacets = []
-                           , start = Nothing
-                           , count = Nothing
-                           , sort = Nothing
+                           , queryStart = Nothing
+                           , queryCount = Nothing
+                           , querySort = Nothing
                            }
 
 instance Query CompanySearchQuery where
   toPathSegments _ = ["company-search"]
-  toQueryItems q = [("keywords", intercalate " " $ map unpack $ keywords q)]
-
-type QueryFacet = Text
+  toQueryItems q = [("keywords", unpack $ queryKeywords q)]
 
 data SortOrder = Relevance
                | Relationship
@@ -83,47 +82,3 @@ parseCompany = tagNoAttr "company" $ Company
                <$> (fmap (read . unpack) $ force "companyId required"
                     $ tagNoAttr "id" content)
                <*> (force "companyName required" $ tagNoAttr "name" content)
-
-data Facets = Facets
-              { totalFacets :: Integer
-              , allFacets :: [Facet]
-              } deriving (Show)
-parseFacets :: MonadThrow m => Sink Event m (Maybe Facets)
-parseFacets = tagName "facets" (requireAttr "total") $ \total -> do
-  facets <- many $ parseFacet
-  return $ Facets (read $ unpack total) facets
-
-data Facet = Facet
-             { facetCode :: Text
-             , facetName :: Text
-             , facetBuckets :: Maybe Buckets
-             } deriving (Show)
-parseFacet :: MonadThrow m => Sink Event m (Maybe Facet)
-parseFacet = tagNoAttr "facet" $ Facet
-             <$> (force "facet must contain a code" $ tagNoAttr "code" content)
-             <*> (force "facet must contain a name" $ tagNoAttr "name" content)
-             <*> parseBuckets
-
-data Buckets = Buckets
-               { totalBuckets :: Integer
-               , allBuckets :: [Bucket]
-               } deriving (Show)
-parseBuckets :: MonadThrow m => Sink Event m (Maybe Buckets)
-parseBuckets = tagName "buckets" (requireAttr "total") $ \total -> do
-  buckets <- many $ parseBucket
-  return $ Buckets (read $ unpack total) buckets
-
-data Bucket = Bucket
-              { bucketCode :: Text
-              , bucketName :: Text
-              , bucketCount :: Integer
-              , selected :: Bool
-              } deriving (Show)
-parseBucket :: MonadThrow m => Sink Event m (Maybe Bucket)
-parseBucket = tagNoAttr "bucket" $ Bucket
-              <$> (force "bucket must contain code" $ tagNoAttr "code" content)
-              <*> (force "bucket must contain name" $ tagNoAttr "name" content)
-              <*> (fmap (read . unpack) $ force "bucket must contain a count"
-                   $ tagNoAttr "count" content)
-              <*> (fmap ("true"==) $ force "bucket must contain a selected"
-                   $ tagNoAttr "selected" content)
