@@ -53,15 +53,12 @@ allCompanyFieldSelectors = [ IdSelector, NameSelector, UniversalNameSelector
                            , TickerSelector, WebsiteUrlSelector
                            , IndustrySelector, StatusSelector, LogoUrlSelector
                            , SquareLogoUrlSelector, BlogRssUrlSelector
-                             -- , TwitterIdSelector
-                             -- , EmployeeCountRangeSelector
-                             -- , SpecialtiesSelector
-                             -- , DescriptionSelector
-                             -- , StockExchangeSelector
-                             -- , FoundedYearSelector
-                             -- , EndYearSelector
-                             -- , NumFollowersSelector
-                             ]
+                           , TwitterIdSelector, EmployeeCountRangeSelector
+                           , SpecialtiesSelector
+                           , DescriptionSelector, StockExchangeSelector
+                           , FoundedYearSelector, EndYearSelector
+                           , NumFollowersSelector
+                           ]
 
 outputField :: CompanyFieldSelector -> String
 outputField IdSelector = "id"
@@ -116,6 +113,14 @@ data CompanyLookupResult = CompanyLookupResult
                            , logoUrl :: Maybe Text
                            , squareLogoUrl :: Maybe Text
                            , blogRssUrl :: Maybe Text
+                           , twitterId :: Maybe Text
+                           , employeeCountRange :: Maybe EmployeeCountRange
+                           , specialties :: Maybe Specialties
+                           , description :: Maybe Text
+                           , stockExchange :: Maybe StockExchange
+                           , foundedYear :: Maybe Integer
+                           , endYear :: Maybe Integer
+                           , numFollowers :: Maybe Integer
                            } deriving (Show)
 parseCompanyLookupResult :: MonadThrow m => Sink Event m (Maybe CompanyLookupResult)
 parseCompanyLookupResult = tagNoAttr "company" $ CompanyLookupResult
@@ -131,6 +136,14 @@ parseCompanyLookupResult = tagNoAttr "company" $ CompanyLookupResult
                            <*> (fmap join $ selNoAttr LogoUrlSelector contentMaybe)
                            <*> (fmap join $ selNoAttr SquareLogoUrlSelector contentMaybe)
                            <*> (fmap join $ selNoAttr BlogRssUrlSelector contentMaybe)
+                           <*> (fmap join $ selNoAttr TwitterIdSelector contentMaybe)
+                           <*> parseEmployeeCountRange
+                           <*> parseSpecialties
+                           <*> (fmap join $ selNoAttr DescriptionSelector contentMaybe)
+                           <*> parseStockExchange
+                           <*> (fmap (fmap (read . unpack)) $ selNoAttr FoundedYearSelector content)
+                           <*> (fmap (fmap (read . unpack)) $ selNoAttr EndYearSelector content)
+                           <*> (fmap (fmap (read . unpack)) $ selNoAttr NumFollowersSelector content)
 
 instance Response CompanyLookupResult where
   parsePage = parseCompanyLookupResult
@@ -163,3 +176,32 @@ parseCompanyStatus :: MonadThrow m => Sink Event m (Maybe CompanyStatus)
 parseCompanyStatus = selNoAttr StatusSelector $ CompanyStatus
                      <$> (force "status must contain a code" $ tagNoAttr "code" content)
                      <*> (force "status must contain a name" $ tagNoAttr "name" content)
+
+data EmployeeCountRange = EmployeeCountRange
+                          { employeeCountRangeCode :: Text
+                          , employeeCountRangeName :: Text
+                          } deriving (Show)
+parseEmployeeCountRange :: MonadThrow m => Sink Event m (Maybe EmployeeCountRange)
+parseEmployeeCountRange = selNoAttr EmployeeCountRangeSelector $ EmployeeCountRange
+                          <$> (force (name++" must contain a code") $ tagNoAttr "code" content)
+                          <*> (force (name++" must contain a name") $ tagNoAttr "name" content)
+  where name = outputField EmployeeCountRangeSelector
+
+data Specialties = Specialties
+                   { totalSpecialties :: Integer
+                   , allSpecialties :: [Text]
+                   } deriving (Show)
+parseSpecialties :: MonadThrow m => Sink Event m (Maybe Specialties)
+parseSpecialties = selName SpecialtiesSelector (requireAttr "total") $ \t -> do
+  specialties <- many $ tagNoAttr "specialty" content
+  return $ Specialties (read $ unpack t) specialties
+
+data StockExchange = StockExchange
+                     { stockExchangeCode :: Text
+                     , stockExchangeName :: Text
+                     } deriving (Show)
+parseStockExchange :: MonadThrow m => Sink Event m (Maybe StockExchange)
+parseStockExchange = selNoAttr StockExchangeSelector $ StockExchange
+                     <$> (force (name ++ " must contain a code") $ tagNoAttr "code" content)
+                     <*> (force (name ++ " must contain a name") $ tagNoAttr "name" content)
+  where name = outputField StockExchangeSelector
