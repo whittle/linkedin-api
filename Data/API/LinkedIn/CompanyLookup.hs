@@ -4,6 +4,12 @@ module Data.API.LinkedIn.CompanyLookup
        ( CompanyLookupQuery(..)
        , CompanyFieldSelector(..)
        , CompanyLookupResult(..)
+       , EmailDomains(..)
+       , CompanyType(..)
+       , CompanyStatus(..)
+       , EmployeeCountRange(..)
+       , Specialties(..)
+       , StockExchange(..)
        ) where
 
 import Data.API.LinkedIn.Query
@@ -142,7 +148,7 @@ instance QueryResponsePair CompanyLookupQuery CompanyLookupResult
 
 data EmailDomains = EmailDomains
                     { totalEmailDomains :: Integer
-                    , allEmailsDomains :: [Text]
+                    , allEmailDomains :: [Text]
                     } deriving (Show)
 parseEmailDomains :: MonadThrow m => Sink Event m (Maybe EmailDomains)
 parseEmailDomains = selName EmailDomainsS (requireAttr "total") $ \t -> do
