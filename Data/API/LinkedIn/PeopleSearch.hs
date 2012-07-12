@@ -3,6 +3,8 @@
 module Data.API.LinkedIn.PeopleSearch
        ( PeopleSearchQuery(..)
        , PeopleSearchPage(..)
+       , People(..)
+       , Person(..)
        ) where
 
 import Data.API.LinkedIn.Facet
