@@ -2,6 +2,7 @@
            , MultiParamTypeClasses #-}
 module Data.API.LinkedIn.PeopleSearch
        ( PeopleSearchQuery(..)
+       , PeopleSearchPage(..)
        ) where
 
 import Data.API.LinkedIn.Facet
