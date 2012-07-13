@@ -11,8 +11,6 @@ import Data.API.LinkedIn.Facet
 import Data.API.LinkedIn.Query
 import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
-import Network.API.LinkedIn --temp
-import Network.API.ShimToken --temp
 
 import Control.Applicative ((<$>), (<*>))
 import Data.Conduit (MonadThrow, Sink)
