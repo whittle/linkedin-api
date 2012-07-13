@@ -1,7 +1,13 @@
 {-# LANGUAGE MultiParamTypeClasses
            , OverloadedStrings #-}
 module Data.API.LinkedIn.Profile
-       ( ProfileQuery
+       ( ProfileQuery(..)
+       , ProfileResult(..)
+       , CurrentShare(..)
+       , ShareVisibility(..)
+       , ShareSource(..)
+       , ShareAuthor(..)
+       , SiteStandardProfileRequest(..)
        ) where
 
 import Data.API.LinkedIn.Query
