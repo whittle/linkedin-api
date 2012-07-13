@@ -1,5 +1,5 @@
 name:             linkedin-api
-version:          0.1.2.3
+version:          0.1.2.4
 synopsis:         Access the LinkedIn API.
 homepage:         https://github.com/whittle/linkedin-api
 license:          MIT
