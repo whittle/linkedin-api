@@ -11,6 +11,8 @@ import Data.API.LinkedIn.Facet
 import Data.API.LinkedIn.Query
 import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
+import Network.API.LinkedIn --temp
+import Network.API.ShimToken --temp
 
 import Control.Applicative ((<$>), (<*>))
 import Data.Conduit (MonadThrow, Sink)
@@ -62,16 +64,17 @@ instance QueryResponsePair PeopleSearchQuery PeopleSearchPage
 
 data People = People
               { peopleTotal :: Integer
-              , peopleCount :: Integer
-              , peopleStart :: Integer
+              , peopleCount :: Maybe Integer
+              , peopleStart :: Maybe Integer
               , allPeople :: [Person]
               } deriving (Show)
 parsePeople :: MonadThrow m => Sink Event m (Maybe People)
-parsePeople = tagName "people" tripleAttr $ \(t, c, s) -> do
+parsePeople = tagName "people" tcsAttr $ \(t, c, s) -> do
   people <- many $ parsePerson
   return $ People t c s people
-  where tripleAttr = (,,) <$> intAttr "total" <*> intAttr "count" <*> intAttr "start"
-        intAttr = fmap (read . unpack) . requireAttr
+  where tcsAttr = (,,) <$> reqIntAttr "total" <*> optIntAttr "count" <*> optIntAttr "start"
+        reqIntAttr = fmap (read . unpack) . requireAttr
+        optIntAttr = fmap (fmap (read . unpack)) . optionalAttr
 
 data Person = Person
               { personId :: Text
