@@ -15,10 +15,14 @@ import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
 import Network.API.LinkedIn --temp
 import Network.API.ShimToken --temp
+import Text.XML.Stream.Parse.Skip --temp
 
+import Prelude hiding (concat)
 import Control.Applicative ((<$>), (<*>))
+import Control.Monad (join)
 import Data.Conduit (MonadThrow, Sink)
 import Data.Default (Default(..))
+import Data.Foldable (concat)
 import Data.List (intercalate)
 import Data.Text (Text, pack, unpack)
 import Data.XML.Types (Event, Name(..))
@@ -56,6 +60,15 @@ data ProfileResult = ProfileResult
                      , distance :: Maybe Integer
                      , lastModifiedTimestamp :: Maybe Integer
                      , currentShare :: Maybe CurrentShare
+                     , profileNetwork :: Maybe ProfileNetwork
+                     , numConnections :: Maybe Integer
+                     , numConnectionsCapped :: Maybe Bool
+                     , profileSummary :: Maybe Text
+                     , profileSpecialties :: Maybe Text
+                     , proposalComments :: Maybe Text
+                     , profileAssociations :: Maybe Text
+                     , profileHonors :: Maybe Text
+                     , profileInterests :: Maybe Text
                      , siteStandardProfileRequest :: Maybe SiteStandardProfileRequest
                      } deriving (Show)
 
@@ -74,6 +87,15 @@ instance Response ProfileResult where
               <*> (fmap (fmap (read . unpack)) $ tagNoAttr (toName DistanceS) content)
               <*> (fmap (fmap (read . unpack)) $ tagNoAttr (toName LastModifiedTimestampS) content)
               <*> parseCurrentShare
+              <*> parseProfileNetwork
+              <*> (fmap (fmap (read . unpack)) $ tagNoAttr (toName NumConnectionsS) content)
+              <*> (fmap (fmap ("true"==)) $ tagNoAttr (toName NumConnectionsCappedS) content)
+              <*> (fmap join $ tagNoAttr (toName SummaryS) contentMaybe)
+              <*> (fmap join $ tagNoAttr (toName SpecialtiesS) contentMaybe)
+              <*> (fmap join $ tagNoAttr (toName ProposalCommentsS) contentMaybe)
+              <*> (fmap join $ tagNoAttr (toName AssociationsS) contentMaybe)
+              <*> (fmap join $ tagNoAttr (toName HonorsS) contentMaybe)
+              <*> (fmap join $ tagNoAttr (toName InterestsS) contentMaybe)
               <*> parseSiteStandardProfileRequest
 
 instance QueryResponsePair ProfileQuery ProfileResult
@@ -127,20 +149,83 @@ parseShareAuthor = tagNoAttr "author" $ ShareAuthor
                    <*> (force "author must contain first-name" $ tagNoAttr "first-name" content)
                    <*> (force "author must contain last-name" $ tagNoAttr "last-name" content)
 
+data ProfileNetwork = ProfileNetwork
+                      { networkStats :: Maybe NetworkStats
+                      , networkUpdates :: NetworkUpdates
+                      } deriving (Show)
+parseProfileNetwork :: MonadThrow m => Sink Event m (Maybe ProfileNetwork)
+parseProfileNetwork = tagNoAttr (toName NetworkS) $ ProfileNetwork
+                      <$> parseNetworkStats
+                      <*> force "network must contain updates" parseNetworkUpdates
+
+data NetworkStats = NetworkStats
+                    { networkStatsTotal :: Integer
+                    , networkStatsProperties :: [Property]
+                    } deriving (Show)
+parseNetworkStats :: MonadThrow m => Sink Event m (Maybe NetworkStats)
+parseNetworkStats = tagName "network-stats" (requireAttr "total") $ \t -> fmap (NetworkStats (read $ unpack t)) $ many parseProperty
+
+data Property = Property
+                { propertyKey :: Text
+                , propertyValue :: Text
+                } deriving (Show)
+parseProperty :: MonadThrow m => Sink Event m (Maybe Property)
+parseProperty = tagName "property" (requireAttr "key") $ \k -> fmap (Property k) content
+
+data NetworkUpdates = NetworkUpdates
+                      { networkUpdatesTotal :: Integer
+                      , networkUpdatesCount :: Maybe Integer
+                      , networkUpdatesStart :: Maybe Integer
+                      , allNetworkUpdates :: [NetworkUpdate]
+                      } deriving (Show)
+parseNetworkUpdates :: MonadThrow m => Sink Event m (Maybe NetworkUpdates)
+parseNetworkUpdates = tagName "updates" tcsAttr $ \(t, c, s) -> NetworkUpdates t c s <$> many parseNetworkUpdate
+  where tcsAttr = (,,) <$> reqIntAttr "total" <*> optIntAttr "count" <*> optIntAttr "start"
+        reqIntAttr = fmap (read . unpack) . requireAttr
+        optIntAttr = fmap (fmap (read . unpack)) . optionalAttr
+
+data NetworkUpdate = NetworkUpdate
+                     { updateTimestamp :: Integer
+                     , updateKey :: Text
+                     , updateType :: Text
+                     , updateContent :: () -- incomplete
+                     , updateIsCommentable :: Bool
+                     , updateComments :: () -- incomplete
+                     , updatedFields :: [Text]
+                     , updateisLikable :: Bool
+                     , updateIsLiked :: Maybe Bool
+                     , updateNumLikes :: Maybe Integer
+                     } deriving (Show)
+parseNetworkUpdate :: MonadThrow m => Sink Event m (Maybe NetworkUpdate)
+parseNetworkUpdate = tagNoAttr "update" $ NetworkUpdate
+                     <$> (fmap (read . unpack) . force "update must contain timestamp" $ tagNoAttr "timestamp" content)
+                     <*> (force "update must contain update-key" $ tagNoAttr "update-key" content)
+                     <*> (force "update must contain update-type" $ tagNoAttr "update-type" content)
+                     <*> (skipTag "update-content" >> return ())
+                     <*> (fmap ("true"==) . force "update must contain is-commentable" $ tagNoAttr "is-commentable" content)
+                     <*> (skipTag "update-comments" >> return ())
+                     <*> fields
+                     <*> (fmap ("true"==) . force "update must contain is-likable" $ tagNoAttr "is-likable" content)
+                     <*> (fmap (fmap ("true"==)) $ tagNoAttr "is-liked" content)
+                     <*> (fmap (fmap (read . unpack)) $ tagNoAttr "num-likes" content)
+  where fields = fmap concat . tagName "updated-fields" ignoreAttrs
+                 . const . many . tagNoAttr "update-field"
+                 . force "update-field must contain name"
+                 $ tagNoAttr "name" content
+
 data ProfileFieldSelector = IdS | FirstNameS | LastNameS | MaidenNameS
                           | FormattedNameS | PhoneticFirstNameS
                           | PhoneticLastNameS | FormattedPhoneticNameS
                           | HeadlineS | IndustryS | DistanceS
                           | LastModifiedTimestampS | CurrentShareS | NetworkS
-                          | ConnectionsS | NumConnectionsS
-                          | NumConnectionsCappedS | SummaryS | SpecialtiesS
-                          | ProposalCommentsS | AssociationsS | HonorsS
-                          | InterestsS | PositionsS | PublicationsS | PatentsS
-                          | LanguagesS | SkillsS | CertificationsS | EducationsS
-                          | CoursesS | VolunteerS | ThreeCurrentPositionsS
-                          | ThreePastPositionsS | NumRecommendersS
-                          | RecommendationsReceivedS | PhoneNumbersS
-                          | ImAccountsS | TwitterAccountsS
+                          | NumConnectionsS | NumConnectionsCappedS | SummaryS
+                          | SpecialtiesS | ProposalCommentsS | AssociationsS
+                          | HonorsS | InterestsS | PositionsS | PublicationsS
+                          | PatentsS | LanguagesS | SkillsS | CertificationsS
+                          | EducationsS | CoursesS | VolunteerS
+                          | ThreeCurrentPositionsS | ThreePastPositionsS
+                          | NumRecommendersS | RecommendationsReceivedS
+                          | PhoneNumbersS | ImAccountsS | TwitterAccountsS
                           | PrimaryTwitterAccountS | BoundAccountTypesS
                           | MfeedRssUrlS | FollowingS | JobBookMarksS
                           | GroupMembershipsS | SuggestionsS | DateOfBirthS
@@ -154,6 +239,9 @@ allProfileFieldSelectors = [ IdS, FirstNameS, LastNameS, MaidenNameS
                            , PhoneticLastNameS, FormattedPhoneticNameS
                            , HeadlineS, IndustryS, DistanceS
                            , LastModifiedTimestampS, CurrentShareS
+                           , NumConnectionsS, NumConnectionsCappedS, SummaryS
+                           , SpecialtiesS, ProposalCommentsS, AssociationsS
+                           , HonorsS, InterestsS
                            , SiteStandardProfileRequestS]
 
 fieldName :: ProfileFieldSelector -> String
@@ -174,7 +262,6 @@ fieldName DistanceS = "distance"
 fieldName LastModifiedTimestampS = "last-modified-timestamp"
 fieldName CurrentShareS= "current-share"
 fieldName NetworkS = "network"
-fieldName ConnectionsS = "connections"
 fieldName NumConnectionsS = "num-connections"
 fieldName NumConnectionsCappedS = "num-connections-capped"
 fieldName SummaryS = "summary"
