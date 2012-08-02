@@ -13,8 +13,8 @@ module Data.API.LinkedIn.Profile
 import Data.API.LinkedIn.Query
 import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
-import Network.API.LinkedIn --temp
-import Network.API.ShimToken --temp
+--import Network.API.LinkedIn --temp
+--import Network.API.ShimToken --temp
 import Text.XML.Stream.Parse.Skip --temp
 
 import Prelude hiding (concat)

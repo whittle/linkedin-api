@@ -44,3 +44,21 @@ mkRequest query = baseURL { reqHeaders = baseHeaders
 baseURL = fromJust $ parseURL $ "http://api.linkedin.com/"
 
 baseHeaders = fromList [("x-li-format", "xml")]
+
+-- reqUrl = fromJust $ parseURL "https://api.linkedin.com/uas/oauth/requestToken"
+-- accUrl = fromJust $ parseURL "https://api.linkedin.com/uas/oauth/accessToken"
+-- authUrl = ("https://www.linkedin.com/uas/oauth/authorize?oauth_token="++) . findWithDefault ("oauth_token","ERROR") . oauthParams
+-- app = Application "7rpbrfj0c53c" "CFrGkHCXujQQ1em6" OOB
+
+-- tokenM :: IO Token
+-- tokenM = runOAuthM (fromApplication app) $ do
+--   ignite app
+--   signRq2 HMACSHA1 Nothing reqUrl >>= oauthRequest CurlClient
+--   cliAskAuthorization authUrl
+--   signRq2 HMACSHA1 Nothing accUrl >>= oauthRequest CurlClient
+--   getToken
+
+-- response = do
+--   token <- tokenM
+--   runOAuthM token $ do
+--     signRq2 HMACSHA1 Nothing srvUrl >>= serviceRequest CurlClient
