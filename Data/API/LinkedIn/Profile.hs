@@ -133,10 +133,17 @@ parseShareVisibility = tagNoAttr "visibility" $ ShareVisibility
                        <$> (force "visibility must contain a code" $ tagNoAttr "code" content)
 
 data ShareSource = ShareSource
-                   { sourceServiceProviderName :: Text
+                   { sourceServiceProviderName :: Maybe Text
+                   , sourceServiceProviderShareId :: Maybe Text
+                   , sourceServiceProviderAccountId :: Maybe Text
+                   , sourceServiceProviderAccountHandle :: Maybe Text
                    } deriving (Show)
 parseShareSource :: MonadThrow m => Sink Event m (Maybe ShareSource)
-parseShareSource = tagNoAttr "source" . fmap ShareSource . force "source must contain service-provider" . tagNoAttr "service-provider" . force "service-provider must contain name" $ tagNoAttr "name" content
+parseShareSource = tagNoAttr "source" $ ShareSource
+                   <$> (fmap join . tagNoAttr "service-provider" $ tagNoAttr "name" content)
+                   <*> tagNoAttr "service-provider-share-id" content
+                   <*> tagNoAttr "service-provider-account-id" content
+                   <*> tagNoAttr "service-provider-account-handle" content
 
 data ShareAuthor = ShareAuthor
                    { authorId :: Text
