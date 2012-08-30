@@ -2,6 +2,7 @@
            , MultiParamTypeClasses #-}
 module Data.API.LinkedIn.PeopleSearch
        ( PeopleSearchQuery(..)
+       , PeopleSearchTerm(..)
        , PeopleSearchPage(..)
        , People(..)
        , Person(..)
@@ -13,25 +14,17 @@ import Data.API.LinkedIn.QueryResponsePair
 import Data.API.LinkedIn.Response
 
 import Control.Applicative ((<$>), (<*>))
+import Data.Char (toLower)
 import Data.Conduit (MonadThrow, Sink)
 import Data.Default (Default(..))
+import Data.List (intercalate)
 import Data.Text (Text, unpack)
 import Data.XML.Types (Event)
 import Text.XML.Stream.Parse
 
 data PeopleSearchQuery = PeopleSearchQuery
-                         { keywords :: Text
-                         , queryFirstName :: Maybe Text
-                         , queryLastName :: Maybe Text
-                         , queryCompanyName :: Maybe Text
-                         , queryCurrentCompany :: Maybe Bool
-                         , queryTitle :: Maybe Text
-                         , queryCurrentTitle :: Maybe Bool
-                         , querySchoolName :: Maybe Text
-                         , queryCurrentSchool :: Maybe Bool
-                         , queryCountryCode :: Maybe Text
-                         , queryPostalCode :: Maybe Text
-                         , queryDistance :: Maybe Integer
+                         { peopleSearchTerms :: [PeopleSearchTerm]
+                         , peopleFieldSelectors :: [PeopleFieldSelector]
                          , queryFacet :: Maybe QueryFacet
                          , queryFacets :: [QueryFacet]
                          , queryStart :: Maybe Integer
@@ -40,11 +33,56 @@ data PeopleSearchQuery = PeopleSearchQuery
                          } deriving (Eq, Show)
 
 instance Default PeopleSearchQuery where
-  def = PeopleSearchQuery "" Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing [] Nothing Nothing Nothing
+  def = PeopleSearchQuery [] [IdSelector, FirstNameSelector, LastNameSelector, HeadlineSelector, PictureUrlSelector] Nothing [] Nothing Nothing Nothing
 
 instance Query PeopleSearchQuery where
-  toPathSegments = const ["people-search"]
-  toQueryItems q = [("keywords", unpack $ keywords q)]
+  toPathSegments = (:[]) . ("people-search"++) . toSelectorString . peopleFieldSelectors
+  toQueryItems = map toQueryItem . peopleSearchTerms
+
+data PeopleSearchTerm = KeywordsTerm Text
+                      | FirstNameTerm Text
+                      | LastNameTerm Text
+                      | CompanyNameTerm Text
+                      | CurrentCompanyTerm Bool
+                      | TitleTerm Text
+                      | CurrentTitleTerm Bool
+                      | SchoolNameTerm Text
+                      | CurrentSchoolTerm Bool
+                      | CountryCodeTerm Text
+                      | PostalCodeTerm Text
+                      | DistanceTerm Integer
+                      deriving (Eq, Show)
+
+toQueryItem :: PeopleSearchTerm -> (String, String)
+toQueryItem (KeywordsTerm t) = ("keywords", unpack t)
+toQueryItem (FirstNameTerm t) = ("first-name", unpack t)
+toQueryItem (LastNameTerm t) = ("last-name", unpack t)
+toQueryItem (CompanyNameTerm t) = ("company-name", unpack t)
+toQueryItem (CurrentCompanyTerm b) = ("current-company", map toLower $ show b)
+toQueryItem (TitleTerm t) = ("title", unpack t)
+toQueryItem (CurrentTitleTerm b) = ("current-title", map toLower $ show b)
+toQueryItem (SchoolNameTerm t) = ("school-name", unpack t)
+toQueryItem (CurrentSchoolTerm b) = ("current-school", map toLower $ show b)
+toQueryItem (CountryCodeTerm t) = ("country-code", unpack t)
+toQueryItem (PostalCodeTerm t) = ("postal-code", unpack t)
+toQueryItem (DistanceTerm i) = ("distance", show i)
+
+data PeopleFieldSelector = IdSelector
+                         | FirstNameSelector
+                         | LastNameSelector
+                         | HeadlineSelector
+                         | PictureUrlSelector
+                         deriving (Eq, Show)
+
+toSelectorPiece :: PeopleFieldSelector -> String
+toSelectorPiece IdSelector = "id"
+toSelectorPiece FirstNameSelector = "first-name"
+toSelectorPiece LastNameSelector = "last-name"
+toSelectorPiece HeadlineSelector = "headline"
+toSelectorPiece PictureUrlSelector = "picture-url"
+
+toSelectorString :: [PeopleFieldSelector] -> String
+toSelectorString = (":(people:("++) . (++"),num-results)") . intercalate "," . map toSelectorPiece
 
 data PeopleSearchPage = PeopleSearchPage
                         { people :: People
@@ -76,11 +114,15 @@ parsePeople = tagName "people" tcsAttr $ \(t, c, s) -> do
 
 data Person = Person
               { personId :: Text
-              , firstName :: Text
-              , lastName :: Text
+              , firstName :: Maybe Text
+              , lastName :: Maybe Text
+              , headline :: Maybe Text
+              , pictureUrl :: Maybe Text
               } deriving (Show)
 parsePerson :: MonadThrow m => Sink Event m (Maybe Person)
 parsePerson = tagNoAttr "person" $ Person
               <$> (force "person must include an id" $ tagNoAttr "id" content)
-              <*> (force "person must include a first-name" $ tagNoAttr "first-name" content)
-              <*> (force "person must include a last-name" $ tagNoAttr "last-name" content)
+              <*> tagNoAttr "first-name" content
+              <*> tagNoAttr "last-name" content
+              <*> tagNoAttr "headline" content
+              <*> tagNoAttr "picture-url" content
