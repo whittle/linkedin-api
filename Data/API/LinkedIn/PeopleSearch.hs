@@ -114,15 +114,15 @@ parsePeople = tagName "people" tcsAttr $ \(t, c, s) -> do
 
 data Person = Person
               { personId :: Text
-              , firstName :: Maybe Text
-              , lastName :: Maybe Text
+              , firstName :: Text
+              , lastName :: Text
               , headline :: Maybe Text
               , pictureUrl :: Maybe Text
               } deriving (Show)
 parsePerson :: MonadThrow m => Sink Event m (Maybe Person)
 parsePerson = tagNoAttr "person" $ Person
               <$> (force "person must include an id" $ tagNoAttr "id" content)
-              <*> tagNoAttr "first-name" content
-              <*> tagNoAttr "last-name" content
+              <*> (force "person requires first-name" $ tagNoAttr "first-name" content)
+              <*> (force "person requires last-name" $ tagNoAttr "last-name" content)
               <*> tagNoAttr "headline" content
               <*> tagNoAttr "picture-url" content

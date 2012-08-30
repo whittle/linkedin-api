@@ -86,7 +86,7 @@ parseCompanies = tagName "companies" (ignoreAttrs) $ \a -> fmap Companies
                                                            $ many parseCompany
 
 data Company = Company { companyId :: Integer
-                       , companyName :: Maybe Text
+                       , companyName :: Text
                        , companyUniversalName :: Maybe Text
                        , companyLogoUrl :: Maybe Text
                        , companyWebsiteUrl :: Maybe Text
@@ -95,7 +95,7 @@ parseCompany :: MonadThrow m => Sink Event m (Maybe Company)
 parseCompany = tagNoAttr "company" $ Company
                <$> (fmap (read . unpack) $ force "companyId required"
                     $ tagNoAttr "id" content)
-               <*> tagNoAttr "name" content
+               <*> (force "company requires name" $ tagNoAttr "name" content)
                <*> tagNoAttr "universal-name" content
                <*> tagNoAttr "logo-url" content
                <*> tagNoAttr "website-url" content
