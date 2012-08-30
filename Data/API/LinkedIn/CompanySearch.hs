@@ -23,6 +23,7 @@ import Text.XML.Stream.Parse
 
 data CompanySearchQuery = CompanySearchQuery
                           { queryKeywords :: Text
+                          , companyFieldSelectors :: [CompanyFieldSelector]
                           , queryHqOnly :: Maybe Bool
                           , queryFacet :: Maybe QueryFacet
                           , queryFacets :: [QueryFacet]
@@ -32,18 +33,28 @@ data CompanySearchQuery = CompanySearchQuery
                           } deriving (Eq, Show)
 
 instance Default CompanySearchQuery where
-  def = CompanySearchQuery { queryKeywords = ""
-                           , queryHqOnly = Nothing
-                           , queryFacet = Nothing
-                           , queryFacets = []
-                           , queryStart = Nothing
-                           , queryCount = Nothing
-                           , querySort = Nothing
-                           }
+  def = CompanySearchQuery "" [IdSelector, NameSelector, UniversalNameSelector, WebsiteUrlSelector, LogoUrlSelector] Nothing Nothing [] Nothing Nothing Nothing
 
 instance Query CompanySearchQuery where
-  toPathSegments _ = ["company-search"]
+  toPathSegments = (:[]) . ("company-search"++) . toSelectorString . companyFieldSelectors
   toQueryItems q = [("keywords", unpack $ queryKeywords q)]
+
+data CompanyFieldSelector = IdSelector
+                          | NameSelector
+                          | UniversalNameSelector
+                          | WebsiteUrlSelector
+                          | LogoUrlSelector
+                          deriving (Eq, Show)
+
+toSelectorPiece :: CompanyFieldSelector -> String
+toSelectorPiece IdSelector = "id"
+toSelectorPiece NameSelector = "name"
+toSelectorPiece UniversalNameSelector = "universal-name"
+toSelectorPiece WebsiteUrlSelector = "website-url"
+toSelectorPiece LogoUrlSelector = "logo-url"
+
+toSelectorString :: [CompanyFieldSelector] -> String
+toSelectorString = (":(companies:("++) . (++"),num-results)") . intercalate "," . map toSelectorPiece
 
 data SortOrder = Relevance
                | Relationship
@@ -75,10 +86,16 @@ parseCompanies = tagName "companies" (ignoreAttrs) $ \a -> fmap Companies
                                                            $ many parseCompany
 
 data Company = Company { companyId :: Integer
-                       , companyName :: Text
+                       , companyName :: Maybe Text
+                       , companyUniversalName :: Maybe Text
+                       , companyLogoUrl :: Maybe Text
+                       , companyWebsiteUrl :: Maybe Text
                        } deriving (Show)
 parseCompany :: MonadThrow m => Sink Event m (Maybe Company)
 parseCompany = tagNoAttr "company" $ Company
                <$> (fmap (read . unpack) $ force "companyId required"
                     $ tagNoAttr "id" content)
-               <*> (force "companyName required" $ tagNoAttr "name" content)
+               <*> tagNoAttr "name" content
+               <*> tagNoAttr "universal-name" content
+               <*> tagNoAttr "logo-url" content
+               <*> tagNoAttr "website-url" content
